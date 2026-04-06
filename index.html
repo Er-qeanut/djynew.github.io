@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>都江堰 VR 全景 | 支持陀螺仪</title>
+    <title>VR全景 - 本地六面体</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #info { position: absolute; top: 20px; left: 20px; color: white; background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 8px; backdrop-filter: blur(5px); pointer-events: none; z-index: 20; font-size: 14px; }
@@ -14,17 +14,16 @@
         @media (max-width: 600px) { button { padding: 8px 16px; font-size: 14px; } #info { font-size: 10px; top: 10px; left: 10px; } }
         .instruction { position: absolute; bottom: 80px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.4); padding: 5px; font-size: 12px; pointer-events: none; z-index: 20; }
         #loading { position: absolute; bottom: 50%; left: 20px; right: 20px; text-align: center; color: white; background: rgba(0,0,0,0.7); padding: 12px; border-radius: 40px; z-index: 100; font-size: 14px; backdrop-filter: blur(4px); pointer-events: none; transform: translateY(50%); }
-        a { color: #ffaa00; }
     </style>
 </head>
 <body>
-    <div id="info">🏞️ 都江堰 VR 全景 | 六面体天空盒</div>
+    <div id="info">🌍 VR 全景 | 本地图片</div>
     <div id="status">⏳ 加载全景中...</div>
     <div id="controls">
         <button id="btn-mouse" class="active">🖱️ 鼠标拖拽</button>
         <button id="btn-gyro">📱 启用陀螺仪</button>
     </div>
-    <div class="instruction">💡 手机陀螺仪需点击「启用陀螺仪」并允许权限（iOS需两次点击） | 如遇加载失败，请尝试刷新或检查网络</div>
+    <div class="instruction">💡 手机陀螺仪需点击「启用陀螺仪」并允许权限（iOS需两次点击）</div>
     <div id="loading">⏳ 正在加载六张全景图，请稍候...</div>
 
     <script type="importmap">
@@ -38,14 +37,15 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // ==================== 您提供的六张图片（顺序：前、后、左、右、上、下） ====================
+        // ========== 请确认以下图片文件名与您上传的完全一致（包括大小写） ==========
+        // 顺序：前、后、左、右、上、下
         const userImages = [
-        "./pano_f.jpg",   // 前
-        "./pano_b.jpg",   // 后
-        "./pano_l.jpg",   // 左
-        "./pano_r.jpg",   // 右
-        "./pano_u.jpg",   // 上
-        "./pano_d.jpg"    // 下
+            "pano_f.jpg",   // 前
+            "pano_b.jpg",   // 后
+            "pano_l.jpg",   // 左
+            "pano_r.jpg",   // 右
+            "pano_u.jpg",   // 上
+            "pano_d.jpg"    // 下
         ];
 
         // CubeTextureLoader 需要的顺序: right, left, up, down, front, back
@@ -71,8 +71,8 @@
         document.body.appendChild(renderer.domElement);
 
         const cubeTextureLoader = new THREE.CubeTextureLoader();
-        // 尝试跨域加载（如果服务器支持CORS）
-        cubeTextureLoader.setCrossOrigin('Anonymous');
+        // 重要：因为是同源图片（和HTML在同一个域名下），不需要设置 crossOrigin，否则可能出错
+        // cubeTextureLoader.setCrossOrigin('Anonymous');  // 注释掉
         
         const loadingDiv = document.getElementById('loading');
         const statusDiv = document.getElementById('status');
@@ -85,22 +85,13 @@
             console.log('全景加载成功');
         }, undefined, (err) => {
             console.error('全景加载失败:', err);
-            loadingDiv.innerHTML = '❌ 图片加载失败<br>可能原因：网络问题或服务器跨域限制<br>可以尝试：<br>1. 刷新页面重试<br>2. 使用手机热点访问<br>3. <a href="#" id="retryBtn" style="color:#ffaa00;">点击重试</a>';
+            loadingDiv.innerHTML = '❌ 图片加载失败<br><br>请检查：<br>1. 图片文件名是否与代码中的一致（大小写敏感）<br>2. 图片是否和 index.html 放在同一目录（根目录）<br>3. 刷新页面重试';
             loadingDiv.style.backgroundColor = 'rgba(255,0,0,0.8)';
             statusDiv.innerHTML = '❌ 加载失败';
             statusDiv.style.backgroundColor = 'rgba(255,0,0,0.7)';
-            
-            // 重试按钮
-            const retryBtn = document.getElementById('retryBtn');
-            if (retryBtn) {
-                retryBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    location.reload();
-                });
-            }
         });
         
-        // ==================== 相机控制（鼠标/触摸 + 陀螺仪） ====================
+        // ==================== 相机控制 ====================
         let pitch = 0, yaw = 0;
         let isDragging = false;
         let lastX = 0, lastY = 0;
@@ -113,7 +104,6 @@
             camera.quaternion.setFromEuler(euler);
         }
         
-        // 鼠标/触摸事件
         function onPointerDown(event) {
             if (gyroActive) return;
             isDragging = true;
@@ -212,6 +202,16 @@
         function animate() { renderer.render(scene, camera); requestAnimationFrame(animate); }
         animate();
         window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+        
+        // 如果检测到协议是 file://，给出友好提示
+        if (window.location.protocol === 'file:') {
+            const warn = document.createElement('div');
+            warn.style.position = 'absolute'; warn.style.bottom = '140px'; warn.style.left = '10px'; warn.style.right = '10px';
+            warn.style.backgroundColor = 'rgba(0,0,0,0.8)'; warn.style.color = '#ffaa00'; warn.style.padding = '12px'; warn.style.borderRadius = '12px';
+            warn.style.fontSize = '12px'; warn.style.textAlign = 'center'; warn.style.zIndex = '100';
+            warn.innerHTML = '⚠️ 检测到您直接双击打开了HTML文件，这会导致无法加载本地图片。<br>请将文件部署到 Web 服务器（如 GitHub Pages）后访问。';
+            document.body.appendChild(warn);
+        }
     </script>
 </body>
 </html>
